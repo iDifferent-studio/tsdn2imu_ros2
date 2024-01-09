@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Imu, MagneticField
+from std_msgs.msg import Header
 
 import signal
 import math
@@ -116,6 +117,9 @@ class imu_publisher(Node):
         msg_mag = MagneticField()
 
         if self.ret == "imu":
+            msg_imu.header = Header()
+            msg_imu.header.stamp = self.get_clock().now().to_msg()
+            msg_imu.header.frame_id = "imu_link"
             msg_imu.orientation.x = 0.0
             msg_imu.orientation.y = 0.0
             msg_imu.orientation.z = 0.0
@@ -128,6 +132,9 @@ class imu_publisher(Node):
             msg_imu.linear_acceleration.z = (self.imu_sensor.acc[2]*9.8)/10000.0
             self.pub_imu.publish(msg_imu)
         elif self.ret == "meg":
+            msg_mag.header = Header()
+            msg_mag.header.stamp = self.get_clock().now().to_msg()
+            msg_mag.header.frame_id = "imu_link"
             msg_mag.magnetic_field.x = self.imu_sensor.geomag[0]/10.0
             msg_mag.magnetic_field.y = self.imu_sensor.geomag[0]/10.0
             msg_mag.magnetic_field.z = self.imu_sensor.geomag[0]/10.0
@@ -157,3 +164,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
+
