@@ -1,12 +1,11 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Imu, MagneticField
+from sensor_msgs.msg import Imu, MagneticField, FluidPressure, Temperature
 from std_msgs.msg import Header
 
 import signal
 import math
 
-import threading
 import serial
 
 from typing import List
@@ -31,12 +30,14 @@ class tsdn121_interface(object):
         self.gyro = [0.0, 0.0, 0.0]
         self.acc  = [0.0, 0.0, 0.0]
         self.geomag=[0.0, 0.0, 0.0]
+        self.airPT=[0.0, 0.0]
 
         self.port = serial.Serial(data_port, baudrate)
 
     def sensor_init(self) :
-        self.port.write(bytes(add_bcc([CMD_HEADER, 0x16, 0x10, 0x05, 0x00])))
-        self.port.write(bytes(add_bcc([CMD_HEADER, 0x18, 0x10, 0x05, 0x00])))
+        self.port.write(bytes(add_bcc([CMD_HEADER, 0x16, 0x10, 0x10, 0x00])))
+        self.port.write(bytes(add_bcc([CMD_HEADER, 0x18, 0x10, 0x10, 0x00])))
+        self.port.write(bytes(add_bcc([CMD_HEADER, 0x1A, 0x10, 0x10, 0x00])))
     
     def sensor_start_freerun(self) :
         self.port.write(bytes(add_bcc([CMD_HEADER, 0x13, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00])))
@@ -53,7 +54,6 @@ class tsdn121_interface(object):
         return byte_buffer
     
     def decode_data(self, byte_buffer) :
-        #print(list(byte_buffer))
         check_buf = list(byte_buffer)
         if len(byte_buffer)<4:
             return "err"
@@ -83,6 +83,15 @@ class tsdn121_interface(object):
             ]
             #print("geomag",self.geomag)
             return "meg"
+        
+        elif byte_buffer[0] == 0x82 :
+            self.airPT=[
+                int.from_bytes(byte_buffer[5:8], "little", signed=True),
+                int.from_bytes(byte_buffer[8:10], "little", signed=True),
+            ]
+            #print("airPT",self.airPT)
+            return "air"
+        
         else:
             return "none"
 
@@ -92,8 +101,10 @@ class imu_publisher(Node):
 
         self.pub_imu = self.create_publisher(Imu, '/sensor/tsdn121/Imu', 10)
         self.pub_mag = self.create_publisher(MagneticField, '/sensor/tsdn121/MagneticField', 10)
-        self.timer_pub = self.create_timer(0.005, self.timer_pub_callback)
-        self.timer_get = self.create_timer(0.0005, self.timer_get_callback)
+        self.pub_airP = self.create_publisher(FluidPressure, '/sensor/tsdn121/AirPressure', 10)
+        self.pub_airT = self.create_publisher(Temperature, '/sensor/tsdn121/AirTemperature', 10)
+        self.timer_pub = self.create_timer(0.05, self.timer_pub_callback)
+        # self.timer_get = self.create_timer(0.005, self.timer_get_callback)
 
         self.imu_sensor = tsdn121_interface(data_port = "/dev/ttyACM0", baudrate = 9600)
         self.get_logger().info('senser init')
@@ -106,39 +117,63 @@ class imu_publisher(Node):
     def stop(self):
         self.imu_sensor.sensor_stop()
 
-    def timer_get_callback(self):
-        self.buffer = self.buffer+self.imu_sensor.sensor_read(1)
+    # def timer_get_callback(self):
+    #     self.buffer = self.buffer+self.imu_sensor.sensor_read(1)
+    #     if self.buffer[-1] == 0x9A:
+    #         self.ret = self.imu_sensor.decode_data(self.buffer)
+    #         self.buffer = bytes()
+
+    def timer_pub_callback(self):
+        # self.buffer = self.buffer+self.imu_sensor.sensor_read(1)
+        self.buffer = self.imu_sensor.sensor_read_until(b"\x9A")
         if self.buffer[-1] == 0x9A:
             self.ret = self.imu_sensor.decode_data(self.buffer)
             self.buffer = bytes()
 
-    def timer_pub_callback(self):
-        msg_imu = Imu()
-        msg_mag = MagneticField()
+            msg_imu = Imu()
+            msg_mag = MagneticField()
+            msg_airP = FluidPressure()
+            msg_airT = Temperature()
 
-        if self.ret == "imu":
-            msg_imu.header = Header()
-            msg_imu.header.stamp = self.get_clock().now().to_msg()
-            msg_imu.header.frame_id = "imu_link"
-            msg_imu.orientation.x = 0.0
-            msg_imu.orientation.y = 0.0
-            msg_imu.orientation.z = 0.0
-            msg_imu.orientation.w = 1.0
-            msg_imu.angular_velocity.x = math.radians(self.imu_sensor.gyro[0]/100.0)
-            msg_imu.angular_velocity.y = math.radians(self.imu_sensor.gyro[1]/100.0)
-            msg_imu.angular_velocity.z = math.radians(self.imu_sensor.gyro[2]/100.0)
-            msg_imu.linear_acceleration.x = (self.imu_sensor.acc[0]*9.8)/10000.0
-            msg_imu.linear_acceleration.y = (self.imu_sensor.acc[1]*9.8)/10000.0
-            msg_imu.linear_acceleration.z = (self.imu_sensor.acc[2]*9.8)/10000.0
-            self.pub_imu.publish(msg_imu)
-        elif self.ret == "meg":
-            msg_mag.header = Header()
-            msg_mag.header.stamp = self.get_clock().now().to_msg()
-            msg_mag.header.frame_id = "imu_link"
-            msg_mag.magnetic_field.x = self.imu_sensor.geomag[0]/10.0
-            msg_mag.magnetic_field.y = self.imu_sensor.geomag[0]/10.0
-            msg_mag.magnetic_field.z = self.imu_sensor.geomag[0]/10.0
-            self.pub_mag.publish(msg_mag)
+            time_stamp = self.get_clock().now().to_msg()
+
+            if self.ret == "imu":
+                msg_imu.header = Header()
+                msg_imu.header.stamp = time_stamp
+                msg_imu.header.frame_id = "imu_link"
+                msg_imu.orientation.x = 0.0
+                msg_imu.orientation.y = 0.0
+                msg_imu.orientation.z = 0.0
+                msg_imu.orientation.w = 1.0
+                msg_imu.angular_velocity.x = math.radians(self.imu_sensor.gyro[0]/100.0)
+                msg_imu.angular_velocity.y = math.radians(self.imu_sensor.gyro[1]/100.0)
+                msg_imu.angular_velocity.z = math.radians(self.imu_sensor.gyro[2]/100.0)
+                msg_imu.linear_acceleration.x = (self.imu_sensor.acc[0]*9.8)/10000.0
+                msg_imu.linear_acceleration.y = (self.imu_sensor.acc[1]*9.8)/10000.0
+                msg_imu.linear_acceleration.z = (self.imu_sensor.acc[2]*9.8)/10000.0
+                self.pub_imu.publish(msg_imu)
+            elif self.ret == "meg":
+                msg_mag.header = Header()
+                msg_mag.header.stamp = time_stamp
+                msg_mag.header.frame_id = "imu_link"
+                msg_mag.magnetic_field.x = self.imu_sensor.geomag[0]/10.0
+                msg_mag.magnetic_field.y = self.imu_sensor.geomag[0]/10.0
+                msg_mag.magnetic_field.z = self.imu_sensor.geomag[0]/10.0
+                self.pub_mag.publish(msg_mag)
+            elif self.ret == "air":
+                msg_airP.header = Header()
+                msg_airP.header.stamp = time_stamp
+                msg_airP.header.frame_id = "imu_link"
+                msg_airP.fluid_pressure = (float)(self.imu_sensor.airPT[0])
+                self.pub_airP.publish(msg_airP)
+                msg_airT.header = Header()
+                msg_airT.header.stamp = time_stamp
+                msg_airT.header.frame_id = "imu_link"
+                msg_airT.temperature = self.imu_sensor.airPT[1]/10.0
+                self.pub_airT.publish(msg_airT)
+            
+            self.ret == "none"
+        
 
 global imu_pub
 
@@ -146,7 +181,7 @@ def ctrlc_handler(signum, frame):        #ctrl+c handle
     global imu_pub
     imu_pub.stop()
     print("Exiting")
-    exit(1)
+    exit(0)
 
 def main(argv=None):
     global imu_pub
