@@ -11,19 +11,19 @@ Clone the driver code from repository.
 ```
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-git clone https://github.com/iDifferent-studio/tsdn2imu_ros2.git
+git clone https://github.com/iDifferent-studio/tsnd2imu_ros2.git
 ```
 
 Build the code.
 
 ```
 cd ..
-colcon build --packages-select tsdn2imu_ros2
+colcon build --packages-select tsnd2imu_ros2
 ```
 
 ## Run the node
 
-Connect the TSDN121 sensor to your computer via USB.
+Connect the TSND121 sensor to your computer via USB.
 
 Long push the power button until the sensor ring to turn the sensor power on.
 
@@ -31,7 +31,7 @@ Run the command to run the node.
 
 ```
 source install/setup.bash
-ros2 run tsdn2imu_ros2 tsdn2imu_ros2 tsdn_imu_pub
+ros2 run tsnd2imu_ros2 tsnd_imu_pub
 ```
 
 If all gose well, the sensor will ring two times to indicate the sensor is starting sending out data.
