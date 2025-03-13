@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'tsdn_imu_pub = tsnd2imu_ros2.tsnd2imu_ros2:main',
+            'tsnd_imu_pub = tsnd2imu_ros2.tsnd2imu_ros2:main',
         ],
     },
 )
