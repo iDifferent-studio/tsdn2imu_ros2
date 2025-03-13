@@ -159,12 +159,12 @@ class imu_publisher(Node):
             msg_imu.orientation.z = 0.0
             msg_imu.orientation.w = 0.0
 
-            msg_imu.angular_velocity_covariance = [0,0,0,0,0,0,0,0,0]
+            msg_imu.angular_velocity_covariance = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
             msg_imu.angular_velocity.x = math.radians(self.imu_sensor.gyro[0]/100.0)-self.offest[0]
             msg_imu.angular_velocity.y = math.radians(self.imu_sensor.gyro[1]/100.0)-self.offest[1]
             msg_imu.angular_velocity.z = math.radians(self.imu_sensor.gyro[2]/100.0)-self.offest[2]
 
-            msg_imu.linear_acceleration_covariance  = [0,0,0,0,0,0,0,0,0]
+            msg_imu.linear_acceleration_covariance  = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
             msg_imu.linear_acceleration.x = (self.imu_sensor.acc[0]*9.8)/10000.0-self.offest[3]
             msg_imu.linear_acceleration.y = (self.imu_sensor.acc[1]*9.8)/10000.0-self.offest[4]
             msg_imu.linear_acceleration.z = (self.imu_sensor.acc[2]*9.8)/10000.0-self.offest[5]
