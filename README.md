@@ -1,8 +1,8 @@
-# ROS2 driver for TSDN121 IMU sensor
+# ROS2 driver for TSND121 IMU sensor
 
 This dirver will config the sensor into "USB connected measure mode" and decode readout data via USB.
 
-Decoded data will publish to topics `/sensor/tsdn121/Imu`(w/o quaternion), `/sensor/tsdn121/MagneticField`, `/sensor/tsdn121/AirTemperature` and `/sensor/tsdn121/AirPressure`
+Decoded data will publish to topics `/sensor/tsnd121/Imu`(w/o quaternion), `/sensor/tsnd121/MagneticField`, `/sensor/tsnd121/AirTemperature` and `/sensor/tsnd121/AirPressure`
 
 ## Installation
 
