@@ -24,7 +24,7 @@ def add_bcc(cmd: List[int]):
     cmd.append(check)
     return cmd
 
-class tsdn121_interface(object):
+class tsnd121_interface(object):
     def __init__(self, data_port, baudrate) :
         self.gyro = [0.0, 0.0, 0.0]
         self.acc  = [0.0, 0.0, 0.0]
@@ -116,15 +116,15 @@ class tsdn121_interface(object):
 
 class imu_publisher(Node):
     def __init__(self):
-        super().__init__('tsdn121_imu_pub') 
+        super().__init__('tsnd121_imu_pub') 
 
-        self.pub_imu = self.create_publisher(Imu, '/sensor/tsdn121/Imu', 10)
-        self.pub_mag = self.create_publisher(MagneticField, '/sensor/tsdn121/MagneticField', 10)
-        self.pub_airP = self.create_publisher(FluidPressure, '/sensor/tsdn121/AirPressure', 10)
-        self.pub_airT = self.create_publisher(Temperature, '/sensor/tsdn121/AirTemperature', 10)
+        self.pub_imu = self.create_publisher(Imu, '/sensor/tsnd121/Imu', 10)
+        self.pub_mag = self.create_publisher(MagneticField, '/sensor/tsnd121/MagneticField', 10)
+        self.pub_airP = self.create_publisher(FluidPressure, '/sensor/tsnd121/AirPressure', 10)
+        self.pub_airT = self.create_publisher(Temperature, '/sensor/tsnd121/AirTemperature', 10)
         self.timer_pub = self.create_timer(0.001, self.timer_pub_callback)
 
-        self.imu_sensor = tsdn121_interface(data_port = "/dev/ttyACM0", baudrate = 9600)
+        self.imu_sensor = tsnd121_interface(data_port = "/dev/ttyACM0", baudrate = 9600)
         self.get_logger().info('senser init')
         self.imu_sensor.sensor_init()
         self.get_logger().info('senser start')
